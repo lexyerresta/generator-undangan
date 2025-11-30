@@ -55,44 +55,29 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 };
 
-// Preset pesan undangan
+// Preset pesan undangan (1 template + custom)
 const MESSAGE_PRESETS = [
   {
-    id: "none",
-    label: "Tanpa pesan",
-    badge: "Hanya kirim link",
-    text: "",
-  },
-  {
-    id: "indo_formal",
-    label: "Bahasa Indonesia",
-    badge: "Formal & terhormat",
+    id: "default",
+    label: "Template Undangan",
+    badge: "Rekomendasi",
     text:
-      "Yth. {NAMA},\n\nDengan penuh hormat kami mengundang Bapak/Ibu untuk hadir dalam acara pernikahan kami. " +
-      "Kehadiran {NAMA} akan menjadi kehormatan dan kebahagiaan bagi kami sekeluarga.\n\n" +
-      "Informasi lengkap mengenai waktu dan lokasi acara dapat dilihat pada tautan undangan berikut:\n{LINK}\n\n" +
-      "Atas perhatian dan doa restunya, kami ucapkan terima kasih.",
+      "Kepada Yth.\n" +
+      "{NAMA}\n\n" +
+      "Om Swastiastu\n\n" +
+      "Tanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i, teman sekaligus sahabat, untuk menghadiri acara pernikahan kami :\n\n" +
+      "Berikut link undangan kami untuk info lengkap dari acara bisa kunjungi :\n\n" +
+      "{LINK}\n\n" +
+      "Merupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.\n\n" +
+      "Mohon maaf perihal undangan hanya dibagikan melalui pesan ini. Dan agar selalu menjaga kesehatan bersama serta datang pada waktu yang telah ditentukan. Terima kasih banyak atas perhatiannya.\n\n" +
+      "Om Shanti, Shanti, Shanti, Om.",
   },
-  {
-    id: "bali_alus",
-    label: "Bahasa Bali Alus",
-    badge: "Halus & sangat sopan",
-    text:
-      "Om Swastyastu {NAMA},\n\nRaris sareng titiang nyuunangang hadirin ring {NAMA} ring acara pawiwahan sane prasida kalaksanayang. " +
-      "Kehadiran {NAMA} dados pakulawargan rahajeng miwah nambahin kabagyan ring titiang sekeluarga.\n\n" +
-      "Warsa, kala, miwah papan acara prasida katitiang ring pranatan undangan online puniki:\n{LINK}\n\n" +
-      "Matur suksma sanget ring pangrungu miwah pangrestu sane kaicen.\n\nOm Shanti Shanti Shanti Om.",
-  },
-  {
-    id: "bali_madya",
-    label: "Bahasa Bali Madya",
-    badge: "Lebih santai namun sopan",
-    text:
-      "Om Swastyastu {NAMA},\n\nTiang ngajak {NAMA} sareng keluarga rauh ring acara pawiwahan tiang. " +
-      "Kehadiran {NAMA} nyenengin miwah nambah rahajeng ring acara puniki.\n\n" +
-      "Waktu lan tempat acara sampun kaatur ring undangan online puniki:\n{LINK}\n\n" +
-      "Matur suksma sanget atas perhatian lan pangrestu {NAMA}.\n\nOm Shanti Shanti Shanti Om.",
-  },
+  // {
+  //   id: "custom",
+  //   label: "Custom",
+  //   badge: "Bisa edit kata-kata",
+  //   text: "",
+  // },
 ];
 
 export default function HomePage() {
@@ -109,13 +94,25 @@ export default function HomePage() {
   const [copiedBulkIndex, setCopiedBulkIndex] = useState<number | null>(null);
 
   // message preset + custom
-  const [selectedPreset, setSelectedPreset] = useState<string>("none");
-  const [customMessage, setCustomMessage] = useState<string>("");
+  const [selectedPreset, setSelectedPreset] = useState<string>("default");
+  const [customMessage, setCustomMessage] = useState<string>(
+    MESSAGE_PRESETS[0].text
+  );
 
   const handlePresetChange = (id: string) => {
     setSelectedPreset(id);
+
     const preset = MESSAGE_PRESETS.find((p) => p.id === id);
-    setCustomMessage(preset?.text ?? "");
+
+    if (!preset) return;
+
+    if (id === "custom") {
+      // biarkan user nulis sendiri (bisa kamu kasih default lain kalau mau)
+      setCustomMessage("");
+    } else {
+      // preset default → pakai teks template, tapi nanti textarea readOnly
+      setCustomMessage(preset.text);
+    }
   };
 
   // SINGLE
@@ -164,7 +161,8 @@ export default function HomePage() {
     const label = name.trim() || "Bapak/Ibu";
 
     // Kalau tidak ada preset & textarea kosong → hanya link
-    if (selectedPreset === "none" && !customMessage.trim()) {
+    if (selectedPreset === "custom" && !customMessage.trim()) {
+      // Kalau user pilih Custom tapi belum nulis apa-apa → fallback sederhana
       return `Undangan untuk ${label}:\n${url}`;
     }
 
@@ -383,10 +381,25 @@ export default function HomePage() {
                 </p>
                 <textarea
                   value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  rows={4}
-                  className="mt-2 w-full rounded-lg bg-slate-900/70 border border-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/30 outline-none"
-                  placeholder="Teks undangan akan muncul di sini jika memilih preset. Bisa diedit bebas..."
+                  onChange={(e) => {
+                    // Hanya boleh mengubah teks kalau preset = "custom"
+                    if (selectedPreset === "custom") {
+                      setCustomMessage(e.target.value);
+                    }
+                  }}
+                  readOnly={selectedPreset !== "custom"}
+                  rows={6}
+                  className={
+                    "mt-2 w-full rounded-lg border px-3 py-2 text-sm text-white outline-none " +
+                    (selectedPreset === "custom"
+                      ? "bg-slate-900/70 border-slate-700 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/30"
+                      : "bg-slate-900/40 border-slate-700/70 text-slate-300 cursor-not-allowed")
+                  }
+                  placeholder={
+                    selectedPreset === "custom"
+                      ? "Tulis sendiri teks undangan di sini..."
+                      : "Template dikunci. Pilih preset Custom jika ingin mengganti kata-kata."
+                  }
                 />
               </div>
 
