@@ -22,6 +22,39 @@ type InviteEntry = {
   url: string;
 };
 
+// Helper aman untuk copy ke clipboard + fallback
+const copyToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.clipboard &&
+      navigator.clipboard.writeText
+    ) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    // fallback manual kalau Clipboard API nggak ada
+    if (typeof document !== "undefined") {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 // Preset pesan undangan
 const MESSAGE_PRESETS = [
   {
@@ -88,7 +121,13 @@ export default function HomePage() {
   // SINGLE
   const handleGenerateSingle = (e: FormEvent) => {
     e.preventDefault();
-    if (!nama.trim() || !BASE_UNDANGAN_URL) return;
+
+    if (!nama.trim()) return;
+
+    if (!BASE_UNDANGAN_URL) {
+      alert("NEXT_PUBLIC_BASE_UNDANGAN_URL belum diset di environment production.");
+      return;
+    }
 
     const encoded = encodeURIComponent(nama.trim());
     setGeneratedUrl(`${BASE_UNDANGAN_URL}?nama=${encoded}`);
@@ -98,7 +137,13 @@ export default function HomePage() {
   // BULK
   const handleGenerateBulk = (e: FormEvent) => {
     e.preventDefault();
-    if (!bulkInput.trim() || !BASE_UNDANGAN_URL) return;
+
+    if (!bulkInput.trim()) return;
+
+    if (!BASE_UNDANGAN_URL) {
+      alert("NEXT_PUBLIC_BASE_UNDANGAN_URL belum diset di environment production.");
+      return;
+    }
 
     const lines = bulkInput
       .split("\n")
@@ -136,7 +181,13 @@ export default function HomePage() {
   const handleCopySingle = async () => {
     if (!generatedUrl) return;
     const text = buildMessage(nama.trim() || "Tamu Undangan", generatedUrl);
-    await navigator.clipboard.writeText(text);
+
+    const ok = await copyToClipboard(text);
+    if (!ok) {
+      alert("Gagal menyalin ke clipboard. Silakan salin manual.");
+      return;
+    }
+
     setCopiedSingle(true);
     setTimeout(() => setCopiedSingle(false), 1500);
   };
@@ -145,7 +196,13 @@ export default function HomePage() {
     const entry = bulkInvites[index];
     if (!entry) return;
     const text = buildMessage(entry.name, entry.url);
-    await navigator.clipboard.writeText(text);
+
+    const ok = await copyToClipboard(text);
+    if (!ok) {
+      alert("Gagal menyalin ke clipboard. Silakan salin manual.");
+      return;
+    }
+
     setCopiedBulkIndex(index);
     setTimeout(() => setCopiedBulkIndex(null), 1500);
   };
@@ -177,7 +234,7 @@ export default function HomePage() {
           // user cancel → abaikan
         }
       } else {
-        await navigator.clipboard.writeText(text);
+        await copyToClipboard(text);
       }
     }
   };
